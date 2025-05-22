@@ -33,5 +33,3 @@ Thumbs.db
 # Carpeta de configuración de VSCode
 .vscode/
 
-# El archivo TESTEO.py si no querés subirlo
-TESTEO.py
