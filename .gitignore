@@ -1,0 +1,37 @@
+# Archivos de caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos de entorno virtual
+venv/
+env/
+.venv/
+.env/
+
+# Archivos de configuración de entorno
+*.env
+*.env.*
+
+# Archivos de logs y bases de datos
+*.log
+*.sqlite3
+*.db
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos de pruebas o temporales
+*.tmp
+*.swp
+*.bak
+
+# Archivos de Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Carpeta de configuración de VSCode
+.vscode/
+
+# El archivo TESTEO.py si no querés subirlo
+TESTEO.py
