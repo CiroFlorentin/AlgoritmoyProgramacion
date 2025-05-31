@@ -140,7 +140,7 @@ class GestorProductos:
             except ValueError:
                 print('reingrese un precio valido')
 
-    def validar_codigo(self, cod_str: str = None) -> int | None:
+    def validar_codigo(self, cod_str: str = None) -> int :
         while True:
             if cod_str is None:
                 cod_str = input('Ingrese un código: ')
@@ -152,8 +152,9 @@ class GestorProductos:
                 print('Reingrese un código válido (solo números).')
                 cod_str = None
 
-    def _buscar_codigo(self, cod: str = None) -> Product | False:
-        codigo_validado = self.validar_codigo(cod)
+    def _buscar_codigo(self, cod: str = None) -> Product :
+
+        codigo_validado = self.validar_codigo(str(cod))
         if codigo_validado is None:
             return False
         for producto in self.productos:
