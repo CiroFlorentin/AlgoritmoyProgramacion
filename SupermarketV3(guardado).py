@@ -32,32 +32,42 @@ class Menu:
         return int(opcion_seleccionada)
 
 
+
 class Fecha:
     def __init__(self, fecha_str: str = None):
+        self.mostrar_hora = False
         if not fecha_str:
-            hoy = datetime.now()
-            self.dia = hoy.day
-            self.mes = hoy.month
-            self.anio = hoy.year
+            ahora = datetime.now()
+            self.dia = ahora.day
+            self.mes = ahora.month
+            self.anio = ahora.year
+            self.hora = ahora.hour
+            self.minuto = ahora.minute
+            self.segundo = ahora.second
+            self.mostrar_hora = True
         else:
             if not self.es_fecha_valida(fecha_str):
                 raise ValueError('Formato de fecha no válido. Debe ser dd/mm/aaaa')
-            partes = str(fecha_str).split('/')
+            partes = fecha_str.split('/')
             self.dia = int(partes[0])
             self.mes = int(partes[1])
             self.anio = int(partes[2])
+
 
     def es_fecha_valida(self, fecha: str):
         patron = r'^(0[1-9]|[12][0-9]|3[01])/(0[1-9]|1[0-2])/\d{4}$'
         return re.match(patron, fecha)
 
     def __str__(self):
-        return f"{self.dia:02d}/{self.mes:02d}/{self.anio}"
+        if self.mostrar_hora:
+            return f"{self.dia:02d}/{self.mes:02d}/{self.anio} {self.hora:02d}:{self.minuto:02d}:{self.segundo:02d}"
+        else:
+            return f"{self.dia:02d}/{self.mes:02d}/{self.anio}"
 # -------------------------------CLASES BASE-----------------------------------------------------
 
 class Cliente:
     def __init__(self, dni: str, nombre: str, fecha_nacimiento: Fecha):
-        if not dni.isdigit() or len(dni) < 7:
+        if not dni.isdigit() or len(dni) != 8:
             raise ValueError("El DNI debe ser numérico y tener al menos 7 dígitos.")
         if not isinstance(fecha_nacimiento, Fecha):
             raise TypeError("La fecha de nacimiento debe ser una instancia de la clase Fecha.")
@@ -102,7 +112,7 @@ class Compra:
         self.producto = producto
         self.cantidad = cantidad
         self.total = total
-        self.fecha = fecha if fecha else Fecha()
+        self.fecha = fecha
 
 # -------------------------------GESTORES-----------------------------------------------------
 class GestorProductos:
@@ -130,17 +140,24 @@ class GestorProductos:
             except ValueError:
                 print('reingrese un precio valido')
 
-    def validar_codigo(self, cod):
+    def validar_codigo(self, cod_str: str = None) -> int | None:
         while True:
-            if cod.isnumeric():
-                return int(cod)
+            if cod_str is None:
+                cod_str = input('Ingrese un código: ')
+            if not cod_str:
+                return None
+            if cod_str.isnumeric():
+                return int(cod_str)
             else:
-                print('reingrese un codigo valido')
+                print('Reingrese un código válido (solo números).')
+                cod_str = None
 
-    def _buscar_codigo(self, codigo):
-        cod = self.validar_codigo(codigo)
+    def _buscar_codigo(self, cod: str = None) -> Product | False:
+        codigo_validado = self.validar_codigo(cod)
+        if codigo_validado is None:
+            return False
         for producto in self.productos:
-            if producto.codigo == cod:
+            if producto.codigo == codigo_validado:
                 return producto
         return False
 
@@ -359,7 +376,13 @@ class GestorCompras:
         dni = self.gestor_clientes.pedir_dni()
         cliente = self._encontrar_cliente(self.gestor_clientes,dni)
         if not cliente:
-            cliente = self._crear_cliente(self.gestor_clientes,dni)
+            opcion = input('Cliente no encontrado. ¿Desea agregar un nuevo cliente? (s/n): ')
+            if opcion.lower() == 's':
+                print('Procediendo a agregar el cliente.')
+                cliente = self._crear_cliente(self.gestor_clientes,dni)
+            else:
+                print('Compra cancelada.')
+                return
         producto = self._obtener_producto_valido(self.gestor_productos)
         if not producto:
             print('No se pudo obtener un producto válido. Compra cancelada.')
@@ -370,25 +393,89 @@ class GestorCompras:
             return
         producto.stock -= cantidad
         total = round(producto.precio * cantidad,2)
-        compra = Compra(cliente, producto, cantidad, total)
+        fecha = Fecha()
+        compra = Compra(cliente, producto, cantidad, total,fecha)
         self.compras.append(compra)
         self.gestor_productos.guardar()
         self.guardar_cambios()
         print(f"Compra realizada con éxito:\nCliente: {cliente.nombre}\nProducto: {producto.nombre}\nCantidad: {cantidad}\nTotal a pagar: ${total:.2f}")
 
-    def ver_compras_por_dni(self):
-        dni = self.gestor_clientes.pedir_dni()
+    def ver_compras_por_dni(self,dni = None):
+        if dni is None:
+            dni = self.gestor_clientes.pedir_dni()
         cliente = self._encontrar_cliente(self.gestor_clientes,dni)
         if not cliente:
             print('Cliente no encontrado.')
             return
         print(f"Compras realizadas por {cliente.nombre} (DNI: {cliente.dni}):")
-        compras_cliente = [compra for compra in self.compras if compra.cliente.dni == cliente.dni]
+        compras_cliente = []
+        for compra in self.compras:
+            if compra.cliente.dni == cliente.dni:
+                compras_cliente.append(compra)
         if not compras_cliente:
             print('No se encontraron compras para este cliente.')
             return
         for compra in compras_cliente:
             print(f"Fecha: {compra.fecha}, Producto: {compra.producto.nombre}, Cantidad: {compra.cantidad}, Total: ${compra.total:.2f}")
+
+    def listar_compras(self):
+        if not self.compras:
+            print('No hay compras registradas.')
+            return
+        print('-Compras-')
+        for compra in self.compras:
+            print(f"Fecha: {compra.fecha}, Cliente: {compra.cliente.nombre} (DNI: {compra.cliente.dni}), Producto: {compra.producto.nombre}, Cantidad: {compra.cantidad}, Total: ${compra.total:.2f}")
+
+    def eliminar_compra(self):
+        if not self.compras:
+            print('No hay compras registradas.')
+            return
+        cliente = self._compras_por_dni()
+        self.ver_compras_por_dni(cliente.dni)
+        compras_cliente =[]
+        for compra in self.compras:
+            if compra.cliente.dni == cliente.dni:
+                compras_cliente.append(compra)
+        if not compras_cliente:
+            print('No se encontraron compras para este cliente.')
+            return
+        while True:
+            try:
+                indice = int(input(f'Ingrese el número de la compra a eliminar (1-{len(compras_cliente)}): ')) - 1
+                if 0 <= indice < len(compras_cliente):
+                    break
+                else:
+                    print(f'Número inválido. Debe estar entre 1 y {len(compras_cliente)}.')
+            except ValueError:
+                print('Entrada no válida. Debe ser un número entero.')
+
+        compra_eliminar = compras_cliente[indice]
+        confirmacion = input(f"¿Está seguro de eliminar la compra realizada por {compra_eliminar.cliente.nombre} (DNI: {compra_eliminar.cliente.dni})? (s/n): ")
+
+        if confirmacion.lower() == 's':
+            producto = self.gestor_productos._buscar_codigo(compra_eliminar.producto.codigo)
+            if producto:
+                producto.stock += compra_eliminar.cantidad
+            else:
+                print("Advertencia: No se encontró el producto para devolver el stock.")
+
+            self.compras.remove(compra_eliminar)
+            self.gestor_productos.guardar()
+            self.guardar_cambios()
+            print('Compra eliminada correctamente.')
+        else:
+            print('Eliminación cancelada.')
+
+    def _compras_por_dni(self):
+        while True:
+            dni = self.gestor_clientes.pedir_dni()
+            cliente = self._encontrar_cliente(self.gestor_clientes, dni)
+            if not dni:
+                return None
+            if cliente:
+                print()
+                return cliente
+            print('Cliente no encontrado. Reintente.')
 
 
     def _encontrar_cliente(self, gestor_clientes,dni):
@@ -398,8 +485,6 @@ class GestorCompras:
         return None
 
     def _crear_cliente(self, gestor_clientes, dni):
-        """Crea un nuevo cliente si no se encuentra uno existente con el DNI proporcionado."""
-        print('Cliente no encontrado. Procederemos a agregar el cliente.')
         gestor_clientes.agregar_cliente(dni)
         return gestor_clientes.encontrar_cliente_por_dni(dni)
 
@@ -451,7 +536,7 @@ class Aplicacion:
         return Menu(opciones, "Supermercado")
 
     def menu_compra(self):
-        opciones = ['1- Comprar Producto','2- Ver Productos','3- Ver Compras por dni', '4- Volver al menú principal']
+        opciones = ['1- Comprar Producto','2- Ver Productos','3- Ver Compras por dni','4- Listar Compras','5- Eliminar Compra','6- Guardar Cambios', '7- Volver al menú principal']
         return Menu(opciones, "Menu Compras")
 
     def menu_supermercado_ej(self):
@@ -473,6 +558,7 @@ class Aplicacion:
                     self.gestor_productos.eliminar()
                 case 7:
                     self.gestor_productos.guardar()
+                    print('Cambios guardados correctamente.')
                 case 8:
                     print('saliendo...')
                     break
@@ -496,6 +582,7 @@ class Aplicacion:
                     self.gestor_clientes.eliminar_cliente()
                 case 6:
                     self.gestor_clientes.guardar_cambios()
+                    print('Cambios guardados correctamente.')
                 case 7:
                     print('Volviendo al menú principal...')
                     break
@@ -516,6 +603,13 @@ class Aplicacion:
                 case 3:
                     self.gestor_compras.ver_compras_por_dni()
                 case 4:
+                    self.gestor_compras.listar_compras()
+                case 5:
+                    self.gestor_compras.eliminar_compra()
+                case 6:
+                    self.gestor_compras.guardar_cambios()
+                    print('Cambios guardados correctamente.')
+                case 7:
                     print('Volver al menú principal')
                     break
                 case _:
