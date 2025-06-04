@@ -1,5 +1,4 @@
 #----------IMPORTS---------------------------------------------------
-import os.path
 import pickle as pk
 from datetime import datetime
 import csv
