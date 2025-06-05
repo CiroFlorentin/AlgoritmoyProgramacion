@@ -184,7 +184,7 @@ class GestorPacientes:
             raise ValueError("DNI inválido. Debe ser numérico y tener 8 dígitos.")
         return dni
 
-    def buscar_DNI(self,dni):
+    def buscar_DNI(self,dni)-> Paciente | None:
         """Buscar un paciente por su DNI."""
         try:
             dni_validado = self._validar_DNI(dni)
@@ -196,7 +196,7 @@ class GestorPacientes:
             print(f"Error al buscar paciente: {e}")
             return None
 
-    def _fecha_valida(self, fecha_str):
+    def _fecha_valida(self, fecha_str)-> Fecha:
         """Valida el formato de la fecha ingresada."""
         while True:
             try:
@@ -308,7 +308,7 @@ class GestorMedicos:
             with open(self.file, 'wb') as bfile:
                 pk.dump(self.medicos, bfile)
 
-    def _validar_matricula(self, matricula: str):
+    def _validar_matricula(self, matricula: str) -> str:
         """Valida la matricula"""
         if not matricula.isdigit() or len(matricula) <= 5:
             raise ValueError("La matrícula debe ser numérica y tener al menos 5 dígitos.")
@@ -450,7 +450,7 @@ class GestorTurnos:
                 fecha_str = input("Ingrese la fecha (dd/mm/aaaa): ")
                 horario_str = input("Ingrese la hora (hh:mm): ")
 
-    def _validar_solapamiento(self, matricula: str, fecha: Fecha):
+    def _validar_solapamiento(self, matricula: str, fecha: Fecha)-> bool:
         """Verifica si el médico ya tiene un turno agendado en la misma fecha y hora. SI tiene da True."""
         for turno in self.turnos:
             if (turno.medico.matricula == matricula and
@@ -458,7 +458,7 @@ class GestorTurnos:
                     return True
         return False
 
-    def _encontrar_paciente(self):
+    def _encontrar_paciente(self)-> Paciente | None:
         """Encuentra un paciente por su DNI."""
         dni = input("Ingrese el DNI del paciente: ")
         paciente = self.gestor_pacientes.buscar_DNI(dni)
@@ -467,7 +467,7 @@ class GestorTurnos:
             return None
         return paciente
 
-    def _encontrar_medico(self):
+    def _encontrar_medico(self)-> Medico | None:
         """Encuentra un médico por su matrícula."""
         matricula = input('Ingrese la matrícula del médico: ')
         medico = self.gestor_medicos.buscar_matricula(matricula)
@@ -476,7 +476,7 @@ class GestorTurnos:
             return
         return medico
 
-    def _generar_nro_unico(self):
+    def _generar_nro_unico(self)-> int:
         """Genera un número único para el turno."""
         if not self.turnos:
             return 1
