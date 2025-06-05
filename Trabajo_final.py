@@ -1,7 +1,6 @@
 #----------IMPORTS---------------------------------------------------
 import pickle as pk
 from datetime import datetime
-import csv
 from pathlib import Path
 
 # -------------------------------DEFAULT-----------------------------------------------------
@@ -427,18 +426,15 @@ class GestorTurnos:
 
     def _exportar_a_csv(self):
         """Exporta los turnos actuales a un archivo CSV."""
-        with open(self.file_csv, 'w', newline='', encoding='utf-8') as cfile:
-            writer = csv.writer(cfile,delimiter=';')
-            writer.writerow(['Nro_turno','Medico_Matricula', 'Medico_Nombre', 'Paciente_DNI', 'Paciente_Nombre', 'Fecha'])
-            for turno in self.turnos:
-                writer.writerow([
-                    turno.nro_turno,
-                    turno.medico.matricula,
-                    turno.medico.nombre,
-                    turno.paciente.dni,
-                    turno.paciente.nombre,
-                    str(turno.fecha)
-                ])
+        try:
+            with open(self.file_csv, 'w', newline='', encoding='utf-8') as cfile:
+                cfile.write('Nro_turno;Medico_Matricula;Medico_Nombre;Paciente_DNI;Paciente_Nombre;Fecha\n')
+                for turno in self.turnos:
+                    linea = f"{turno.nro_turno};{turno.medico.matricula};{turno.medico.nombre};{turno.paciente.dni};{turno.paciente.nombre};{turno.fecha}\n"
+                    cfile.write(linea)
+        except Exception as e:
+            print(f"Error al exportar a CSV: {e}")
+
 
     def _obtener_fecha_valida(self, fecha_str: str, horario_str: str = None) -> Fecha:
         """Solicita una fecha válida al usuario hasta que sea correcta."""
@@ -593,22 +589,19 @@ class GestorTurnos:
         else:
             print("No se encontró un turno con los datos proporcionados.")
 
-    def _informe_csv(self,medico:Medico):
+    def _informe_csv(self, medico: Medico):
         nombre_archivo = f"Datos/informe_turnos_{medico.nombre}.csv"
-        with open(nombre_archivo, 'w', newline='', encoding='utf-8') as cfile:
-            writer = csv.writer(cfile, delimiter=';')
-            writer.writerow(['Nro_turno','Medico_Matricula', 'Medico_Nombre', 'Paciente_DNI', 'Paciente_Nombre', 'Fecha'])
-            turnos_medico = [turno for turno in self.turnos if turno.medico.matricula == medico.matricula]
-            turnos_medicos_ordenados = merge_sort().main(turnos_medico)
-            for turno in turnos_medicos_ordenados:
-                writer.writerow([
-                    turno.nro_turno,
-                    turno.medico.matricula,
-                    turno.medico.nombre,
-                    turno.paciente.dni,
-                    turno.paciente.nombre,
-                    str(turno.fecha)
-                ])
+        try:
+            with open(nombre_archivo, 'w', newline='', encoding='utf-8') as cfile:
+                cfile.write('Nro_turno;Medico_Matricula;Medico_Nombre;Paciente_DNI;Paciente_Nombre;Fecha\n')
+                turnos_medico = [turno for turno in self.turnos if turno.medico.matricula == medico.matricula]
+                turnos_medicos_ordenados = merge_sort().main(turnos_medico)
+
+                for turno in turnos_medicos_ordenados:
+                    linea = f"{turno.nro_turno};{turno.medico.matricula};{turno.medico.nombre};{turno.paciente.dni};{turno.paciente.nombre};{turno.fecha}\n"
+                    cfile.write(linea)
+        except Exception as e:
+            print(f"Error al generar el informe: {e}")
 
     def informe_medico(self):
         """Genera un informe de turnos por médico."""
