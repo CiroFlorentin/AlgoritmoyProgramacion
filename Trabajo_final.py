@@ -64,6 +64,47 @@ class Fecha:
         else:
             return self.dt_objeto.strftime("%d/%m/%Y")
 
+class merge_sort:
+    """Clase para ordenar una lista de Turnos por fecha y hora usando el algoritmo Merge Sort."""
+
+    def merge(self, lista: list, list_temp, inicio, medio, fin):
+        fin_primera_parte = medio - 1
+        indice_temp = inicio
+        tamano_lista = fin - inicio + 1
+
+        while inicio <= fin_primera_parte and medio <= fin:
+            if lista[inicio].fecha.dt_objeto <= lista[medio].fecha.dt_objeto:
+                list_temp[indice_temp] = lista[inicio]
+                inicio += 1
+            else:
+                list_temp[indice_temp] = lista[medio]
+                medio += 1
+            indice_temp += 1
+        while inicio <= fin_primera_parte:
+            list_temp[indice_temp] = lista[inicio]
+            inicio += 1
+            indice_temp += 1
+        while medio <= fin:
+            list_temp[indice_temp] = lista[medio]
+            medio += 1
+            indice_temp += 1
+        for i in range(0, tamano_lista):
+            lista[fin] = list_temp[fin]
+            fin -= 1
+
+    def merge_sort(self,lista, list_temp, inicio, fin):
+        if inicio < fin:
+            medio = (inicio + fin) // 2
+            self.merge_sort(lista, list_temp, inicio, medio)
+            self.merge_sort(lista, list_temp, medio + 1, fin)
+            self.merge(lista, list_temp, inicio, medio + 1, fin)
+
+    def main(self,lista):
+        tamano_lista = len(lista)
+        lista_temp = [0] * tamano_lista
+        self.merge_sort(lista, lista_temp, 0, tamano_lista - 1)
+        return lista
+
 
 # ---------------------------CLASES BASES---------------------------------------------------
 class Paciente:
@@ -273,7 +314,7 @@ class GestorMedicos:
             raise ValueError("La matrícula debe ser numérica y tener al menos 5 dígitos.")
         return matricula
 
-    def buscar_matricula(self, matricula: str):
+    def buscar_matricula(self, matricula: str) -> Medico | None:
         """Buscar un medico por su matrícula."""
         try:
             matricula_validada = self._validar_matricula(matricula)
@@ -552,12 +593,14 @@ class GestorTurnos:
         else:
             print("No se encontró un turno con los datos proporcionados.")
 
-    def _informe_csv(self,matricula: str):
-        with open(self.informe_csv, 'w', newline='', encoding='utf-8') as cfile:
+    def _informe_csv(self,medico:Medico):
+        nombre_archivo = f"Datos/informe_turnos_{medico.nombre}.csv"
+        with open(nombre_archivo, 'w', newline='', encoding='utf-8') as cfile:
             writer = csv.writer(cfile, delimiter=';')
             writer.writerow(['Nro_turno','Medico_Matricula', 'Medico_Nombre', 'Paciente_DNI', 'Paciente_Nombre', 'Fecha'])
-            turnos_medico = [turno for turno in self.turnos if turno.medico.matricula == matricula]
-            for turno in turnos_medico:
+            turnos_medico = [turno for turno in self.turnos if turno.medico.matricula == medico.matricula]
+            turnos_medicos_ordenados = merge_sort().main(turnos_medico)
+            for turno in turnos_medicos_ordenados:
                 writer.writerow([
                     turno.nro_turno,
                     turno.medico.matricula,
@@ -576,7 +619,7 @@ class GestorTurnos:
             print("Médico no encontrado.")
             return
         print(f"Generando informe de turnos para el médico {medico.nombre} (Matrícula: {medico.matricula})...")
-        self._informe_csv(matricula)
+        self._informe_csv(medico)
 
 #--------------------------MENU---------------------------------------------------
 class App:
@@ -693,6 +736,9 @@ class App:
                     break
                 case _:
                     print("Opción no válida. Intente nuevamente.")
+
+
+
 
 if __name__ == "__main__":
     app = App()
