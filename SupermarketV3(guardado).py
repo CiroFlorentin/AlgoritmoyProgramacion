@@ -31,8 +31,6 @@ class Menu:
                 print(f'Opción no válida. Debe ser un número entre 1 y {num_opciones}.')
         return int(opcion_seleccionada)
 
-
-
 class Fecha:
     def __init__(self, fecha_str: str = None):
         self.mostrar_hora = False
