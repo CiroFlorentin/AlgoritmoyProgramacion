@@ -166,10 +166,12 @@ class Turno:
             f"📌 Motivo: {self.motivo}"
         )
 # --------------------------------GESTORES---------------------------------------------------
+
 class GestorPacientes:
     def __init__(self,file: str = "Datos/pacientes.bin"):
-        self.file = file
         try:
+            self.file = file
+            self.gestor_turnos = None
             with open(self.file, 'rb') as bfile:
                 self.pacientes: list[Paciente] = pk.load(bfile)
         except (FileNotFoundError, EOFError):
@@ -208,7 +210,7 @@ class GestorPacientes:
         """Guarda los cambios realizados en la lista de pacientes."""
         with open(self.file, 'wb') as bfile:
             pk.dump(self.pacientes, bfile)
-        print("Cambios guardados correctamente.")
+
 
     def listar_pacientes(self):
         """Lista Todos los pacientes."""
@@ -293,13 +295,21 @@ class GestorPacientes:
         opcion = input(f"¿Estás seguro de que deseas eliminar al paciente {paciente.nombre} (DNI: {paciente.dni})? (s/n): ")
         if opcion.lower() == 's':
             self.pacientes.remove(paciente)
+            if self.gestor_turnos:
+                # Eliminar turnos asociados al paciente
+                turnos = [turno for turno in self.gestor_turnos.turnos if turno.paciente.dni == paciente.dni]
+                for turno in turnos:
+                    self.gestor_turnos.turnos.remove(turno)
+            # Guardar cambios en pacientes y turnos
+            self.gestor_turnos.guardar_cambios()
             self.guardar_cambios()
             print(f"Paciente {paciente.nombre} eliminado correctamente.")
 
 class GestorMedicos:
     def __init__(self,file: str = "Datos/medicos.bin"):
-        self.file = file
         try:
+            self.file = file
+            self.gestor_turnos = None
             with open(self.file, 'rb') as bfile:
                 self.medicos: list[Medico] = pk.load(bfile)
         except (FileNotFoundError, EOFError):
@@ -329,7 +339,7 @@ class GestorMedicos:
         """Guarda los cambios realizados en la lista de médicos."""
         with open(self.file, 'wb') as bfile:
             pk.dump(self.medicos, bfile)
-        print("Cambios guardados correctamente.")
+
 
     def listar_medicos(self):
         """Lista Todos los médicos."""
@@ -396,6 +406,13 @@ class GestorMedicos:
         opcion = input(f"¿Estás seguro de que deseas eliminar al médico {medico.nombre} (Matrícula: {medico.matricula})? (s/n): ")
         if opcion.lower() == 's':
             self.medicos.remove(medico)
+            if self.gestor_turnos:
+                # Eliminar turnos asociados al médico
+                turnos = [turno for turno in self.gestor_turnos.turnos if turno.medico.matricula == medico.matricula]
+                for turno in turnos:
+                    self.gestor_turnos.turnos.remove(turno)
+            # Guardar cambios en médicos y turnos
+            self.gestor_turnos.guardar_cambios()
             self.guardar_cambios()
             print(f"Médico {medico.nombre} eliminado correctamente.")
 
@@ -419,12 +436,10 @@ class GestorTurnos:
         try:
             with open(self.file_bin, 'wb') as bfile:
                 pk.dump(self.turnos, bfile)
-            self._exportar_a_csv()
-            print("Cambios guardados correctamente.")
         except Exception as e:
             print(f"Error al guardar los cambios: {e}")
 
-    def _exportar_a_csv(self):
+    def exportar_a_csv(self):
         """Exporta los turnos actuales a un archivo CSV."""
         try:
             with open(self.file_csv, 'w', newline='', encoding='utf-8') as cfile:
@@ -614,14 +629,16 @@ class GestorTurnos:
         print(f"Generando informe de turnos para el médico {medico.nombre} (Matrícula: {medico.matricula})...")
         self._informe_csv(medico)
 
+
 #--------------------------MENU---------------------------------------------------
 class App:
     def __init__(self):
         Path("Datos").mkdir(exist_ok=True)  #Asegurara que carpeta datos exista, sino la crea. Yo almaceno en esa carpeta.
-
         self.gestor_pacientes = GestorPacientes()
         self.gestor_medicos = GestorMedicos()
         self.gestor_turnos = GestorTurnos(self.gestor_pacientes, self.gestor_medicos)
+        self.gestor_medicos.gestor_turnos = self.gestor_turnos
+        self.gestor_pacientes.gestor_turnos = self.gestor_turnos
         self.menu_principal = Menu(['1. Gestionar Pacientes','2. Gestionar Médicos','3. Gestionar Turnos','4. Salir'],'Menú Principal')
         self.menu_pacientes =  self._Menu_pacientes()
         self.menu_medicos = self._Menu_medicos()
@@ -636,7 +653,7 @@ class App:
         return Menu(opciones, "Menu Médicos")
 
     def _Menu_turnos(self):
-        opciones = ['1. Listar Turnos','2. Listar Turno por Paciente o Medico','3. Buscar por fecha','4. Agregar Turno','5. Eliminar','6. Guardar cambios','7. Generar informe de turnos por medico','8. Volver al menú principal']
+        opciones = ['1. Listar Turnos','2. Listar Turno por Paciente o Medico','3. Buscar por fecha','4. Agregar Turno','5. Eliminar','6. Guardar cambios','7. Generar informe de turnos por medico','8. Exportar CSV','9. Volver al menú principal']
         return Menu(opciones, "Menu Turnos")
 
     def _Menu_pacientes_ejecucion(self):
@@ -656,6 +673,7 @@ class App:
                     self.gestor_pacientes.eliminar_paciente()
                 case 6:
                     self.gestor_pacientes.guardar_cambios()
+                    print("Cambios guardados correctamente.")
                 case 7:
                     print("Volviendo al menú principal...")
                     break
@@ -679,6 +697,7 @@ class App:
                     self.gestor_medicos.eliminar_medico()
                 case 6:
                     self.gestor_medicos.guardar_cambios()
+                    print("Cambios guardados correctamente.")
                 case 7:
                     print("Volviendo al menú principal...")
                     break
@@ -702,9 +721,13 @@ class App:
                     self.gestor_turnos.eliminar_turno()
                 case 6:
                     self.gestor_turnos.guardar_cambios()
+                    print("Cambios guardados correctamente.")
                 case 7:
                     self.gestor_turnos.informe_medico()
                 case 8:
+                    self.gestor_turnos.exportar_a_csv()
+                    print('Exportación a CSV completada.')
+                case 9:
                     print("Volviendo al menú principal...")
                     break
                 case _:
@@ -729,9 +752,6 @@ class App:
                     break
                 case _:
                     print("Opción no válida. Intente nuevamente.")
-
-
-
 
 if __name__ == "__main__":
     app = App()
